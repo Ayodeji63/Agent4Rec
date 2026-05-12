@@ -22,12 +22,19 @@ import faiss
 from langchain.chat_models import ChatOpenAI
 from langchain.schema.language_model import BaseLanguageModel
 from simulation.retriever import AvatarRetriver
-
+from dotenv import load_dotenv
 import wandb
 
 from termcolor import cprint
 
 import simulation.vars as vars
+from google import genai
+from google.genai import types
+import os
+
+load_dotenv()
+
+gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 class AvatarMemory(BaseMemory):
     llm: BaseLanguageModel
@@ -105,7 +112,7 @@ class AvatarMemory(BaseMemory):
                 result.append(doc)
         return self.format_memories_simple(result)
 
-    def get_completion(self, prompt, llm="gpt-3.5-turbo", temperature=0):
+    def get_completion(self, prompt, llm="gemini-3.1-flash-lite", temperature=0):
         messages = [{"role":"user", "content" : prompt}]
         response = ''
         except_waiting_time = 1
@@ -137,13 +144,23 @@ class AvatarMemory(BaseMemory):
                             vars.lock.release()
                             print("\nMemory End Identifier", time.time(), vars.global_start_time, (time.time() - vars.global_start_time), vars.global_steps)
 
-                response = openai.ChatCompletion.create(
-                    model=llm,
-                    messages=messages,
-                    temperature=temperature,
-                    request_timeout = 20,
-                    max_tokens=1000
-                )
+                # response = openai.ChatCompletion.create(
+                #     model=llm,
+                #     messages=messages,
+                #     temperature=temperature,
+                #     request_timeout = 20,
+                #     max_tokens=1000
+                # )
+                
+                api_response = gemini_model.generate_content(
+                    model="gemini-3.1-flash-lite",
+                    contents=prompt,
+                    config=types.GenerateConfig(
+                        temperature=temperature,
+                        max_output_tokens=1000
+                    )
+                  )
+                response = api_response.text
 
                 print("===================================")
                 print(f'{response["usage"]["total_tokens"]} = {response["usage"]["prompt_tokens"]} + {response["usage"]["completion_tokens"]} tokens counted by the OpenAI API.')

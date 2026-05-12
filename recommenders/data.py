@@ -87,7 +87,7 @@ class Data:
         self.batch_size = args.batch_size
         self.neg_sample = args.neg_sample
         self.IPStype = args.IPStype
-        self.device = torch.device(args.cuda)
+        self.device = torch.device(args.cuda if torch.cuda.is_available() else "cpu")
         self.modeltype = args.modeltype
 
         self.user_pop_max = 0
@@ -317,7 +317,7 @@ class Data:
                 print(f"costing {end - s}s, saved norm_mat...")
                 sp.save_npz(self.path + '/s_pre_adj_mat.npz', norm_adj)
             self.Graph = self._convert_sp_mat_to_sp_tensor(norm_adj)
-            self.Graph = self.Graph.coalesce().cuda(self.device)
+            self.Graph = self.Graph.coalesce().to(self.device)
 
         return self.Graph
     

@@ -19,7 +19,7 @@ class InfoNCE_RS(AbstractRS):
         pbar = tqdm(enumerate(self.data.train_loader), mininterval=2, total = len(self.data.train_loader))
         for batch_i, batch in pbar:          
 
-            batch = [x.cuda(self.device) for x in batch]
+            batch = [x.to(self.device) for x in batch]
             users, pos_items, users_pop, pos_items_pop, pos_weights  = batch[0], batch[1], batch[2], batch[3], batch[4]
 
             self.model.train()

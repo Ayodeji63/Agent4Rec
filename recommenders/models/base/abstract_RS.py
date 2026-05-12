@@ -20,7 +20,7 @@ class AbstractRS(nn.Module):
         # basic information
         self.args = args
         self.special_args = special_args
-        self.device = torch.device(args.cuda)
+        self.device = torch.device(args.cuda if torch.cuda.is_available() else "cpu")
         self.test_only = args.test_only
         self.candidate = args.candidate
 
@@ -51,9 +51,9 @@ class AbstractRS(nn.Module):
         self.n_items = self.data.n_items
         self.train_user_list = self.data.train_user_list
         self.valid_user_list = self.data.valid_user_list
-        # = torch.tensor(self.data.population_list).cuda(self.device)
-        self.user_pop = torch.tensor(self.data.user_pop_idx).type(torch.LongTensor).cuda(self.device)
-        self.item_pop = torch.tensor(self.data.item_pop_idx).type(torch.LongTensor).cuda(self.device)
+        # = torch.tensor(self.data.population_list).to(self.device)
+        self.user_pop = torch.tensor(self.data.user_pop_idx).type(torch.LongTensor).to(self.device)
+        self.item_pop = torch.tensor(self.data.item_pop_idx).type(torch.LongTensor).to(self.device)
         self.user_pop_max = self.data.user_pop_max
         self.item_pop_max = self.data.item_pop_max 
 
@@ -61,7 +61,7 @@ class AbstractRS(nn.Module):
         self.running_model = args.modeltype + '_batch' if self.inbatch else args.modeltype
         exec('from models.'+ args.modeltype + ' import ' + self.running_model) # import the model first
         self.model = eval(self.running_model + '(args, self.data)') # initialize the model with the graph
-        self.model.cuda(self.device)
+        self.model.to(self.device)
 
 
         # preparing for saving

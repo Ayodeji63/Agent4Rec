@@ -23,7 +23,7 @@ class abstract_arena:
         self.val_users = args.val_users
         self.val_ratio = args.val_ratio
         self.simulation_name = args.simulation_name
-        self.device = torch.device(args.cuda)
+        self.device = torch.device(args.cuda if torch.cuda.is_available() else "cpu")
         self.n_avatars = args.n_avatars
         self.modeltype = args.modeltype
         self.items_per_page = args.items_per_page
@@ -111,7 +111,7 @@ class abstract_arena:
         self.running_model = self.saved_args.modeltype
         exec('from recommenders.models.'+ self.saved_args.modeltype + ' import ' + self.running_model) # import the model first
         self.model = eval(self.running_model + '(self.saved_args, self.data)') # initialize the model with the graph
-        self.model.cuda(self.device)
+        self.model.to(self.device)
         print("finish generating recommender")
         sys.path.remove(sys.path[0] + "/recommenders")
 

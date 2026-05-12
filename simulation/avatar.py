@@ -17,7 +17,19 @@ import time
 import datetime
 import torch
 from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import pandas as pd
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+gemini_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
 
 import wandb
 
@@ -71,12 +83,30 @@ class Avatar(abstract_avatar):
         def score_normalizer(val: float) -> float:
             return 1 - 1 / (1 + np.exp(val))
         
-        embeddings_model = OpenAIEmbeddings(request_timeout = 20)
+        # embeddings_model = OpenAIEmbeddings(request_timeout = 20)
+        # embeddings_model =  HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        embeddings_model = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",
+            google_api_key=os.getenv("GOOGLE_API_KEY")
+            )
         embedding_size = 1536
         index = faiss.IndexFlatL2(embedding_size)
         vectorstore = FAISS(embeddings_model.embed_query, index, InMemoryDocstore({}), {}, relevance_score_fn=score_normalizer)
 
-        LLM = ChatOpenAI(max_tokens=1000, temperature=0.3, request_timeout = 30)
+        # LLM = ChatOpenAI(
+        #         model_name="llama-3.3-70b-versatile",
+        #         openai_api_key="**",
+        #         openai_api_base="https://api.groq.com/openai/v1",
+        #         max_tokens=1000,
+        #         temperature=0.3,
+        #         request_timeout=30
+        #     )
+        LLM = ChatGoogleGenerativeAI(
+                model="gemini-3.1-flash-lite",  # or "gemini-1.5-pro"
+                google_api_key=os.getenv("GOOGLE_API_KEY"),  # your Gemini key
+                temperature=0.7,
+                 convert_system_message_to_human=True 
+            )
         avatar_retriever = AvatarRetriver(vectorstore=vectorstore, k=5)
         self.memory = AvatarMemory(memory_retriever=avatar_retriever, llm=LLM, reflection_threshold=3, use_wandb = self.use_wandb)
         t2 = time.time()
@@ -120,20 +150,30 @@ class Avatar(abstract_avatar):
                             vars.lock.release()
                             print("\nEnd Identifier", time.time(), vars.global_start_time, (time.time() - vars.global_start_time), vars.global_steps)
                             
-                completion = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo", 
-                    messages=messages,
-                    temperature=0.2,
-                    request_timeout = timeout,
-                    max_tokens=1000
-                    )
+                # completion = openai.ChatCompletion.create(
+                #     model="gpt-3.5-turbo", 
+                #     messages=messages,
+                #     temperature=0.2,
+                #     request_timeout = timeout,
+                #     max_tokens=1000
+                #     )
 
-                l_end = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time()))
-                k_tokens = completion["usage"]["total_tokens"]/1000
-                print(f"User {self.avatar_id} used {k_tokens} tokens from {l_start} to {l_end}")
-                self.memory.user_k_tokens += k_tokens
-                vars.global_k_tokens += k_tokens
-                response = completion["choices"][0]["message"]["content"]
+                # l_end = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time()))
+                # k_tokens = completion["usage"]["total_tokens"]/1000
+                # print(f"User {self.avatar_id} used {k_tokens} tokens from {l_start} to {l_end}")
+                # self.memory.user_k_tokens += k_tokens
+                # vars.global_k_tokens += k_tokens
+                # response = completion["choices"][0]["message"]["content"]
+                gemini_messages = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+                completion = gemini_model.generate_content(
+                        model="gemini-3.1-flash-lite",
+                        contents=gemini_messages,
+                        config= types.GenerationConfig(
+                            temperature=0.2,
+                            max_output_tokens=1000
+                        )
+                    )
+                response = completion.text
             except Exception as e:
                 # print(e)
                 vars.global_error_cast += 1
