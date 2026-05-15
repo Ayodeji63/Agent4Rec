@@ -54,6 +54,8 @@ class AvatarMemory(BaseMemory):
 
     user_k_tokens: float = 0.0
     use_wandb: bool = False
+    ethnic_group: str = ""
+    is_restaurant_domain: bool = False
 
 
     def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, Any]) -> None:
@@ -112,77 +114,100 @@ class AvatarMemory(BaseMemory):
                 result.append(doc)
         return self.format_memories_simple(result)
 
-    def get_completion(self, prompt, llm="gemini-3.1-flash-lite", temperature=0):
-        messages = [{"role":"user", "content" : prompt}]
+    # def get_completion(self, prompt, llm="gemini-3.1-flash-lite", temperature=0):
+    #     messages = [{"role":"user", "content" : prompt}]
+    #     response = ''
+    #     except_waiting_time = 1
+    #     total_waiting_time = 0
+    #     max_waiting_time = 16
+    #     current_sleep_time = 0.5
+    #     while response == '':
+    #         try:
+    #             if(self.use_wandb): # whether to use wandb
+    #                 start_time = time.time()
+
+    #                 if((start_time - vars.global_start_time)//vars.global_interval > vars.global_steps):
+    #                     if(vars.lock.acquire(False)):
+    #                         print("??", vars.lock, (start_time - vars.global_start_time)//vars.global_interval, vars.global_interval, vars.global_steps)
+    #                         print("\nMemory Start Identifier", start_time, vars.global_start_time, (start_time - vars.global_start_time), vars.global_steps)
+    #                         # vars.lock = True
+    #                         vars.global_steps += 1
+    #                         wandb.log(
+    #                             data = {"Real-time Traffic": vars.global_k_tokens - vars.global_last_tokens_record,
+    #                                     "Total Traffic": vars.global_k_tokens,
+    #                                     "Finished Users": vars.global_finished_users,
+    #                                     "Finished Pages": vars.global_finished_pages,
+    #                                     "Error Cast": vars.global_error_cast/1000
+    #                             },
+    #                             step = vars.global_steps
+    #                         )
+    #                         vars.global_last_tokens_record = vars.global_k_tokens
+    #                         # vars.lock = False
+    #                         vars.lock.release()
+    #                         print("\nMemory End Identifier", time.time(), vars.global_start_time, (time.time() - vars.global_start_time), vars.global_steps)
+
+    #             # response = openai.ChatCompletion.create(
+    #             #     model=llm,
+    #             #     messages=messages,
+    #             #     temperature=temperature,
+    #             #     request_timeout = 20,
+    #             #     max_tokens=1000
+    #             # )
+                
+    #             api_response = gemini_client.models.generate_content(
+    #                 model="gemini-3.1-flash-lite",
+    #                 contents=prompt,
+    #                 config=types.GenerateConfig(
+    #                     temperature=temperature,
+    #                     max_output_tokens=1000
+    #                 )
+    #               )
+    #             response = api_response.text
+    #             return response
+
+    #             print("===================================")
+    #             print(f'{response["usage"]["total_tokens"]} = {response["usage"]["prompt_tokens"]} + {response["usage"]["completion_tokens"]} tokens counted by the OpenAI API.')
+    #             k_tokens = response["usage"]["total_tokens"]/1000
+    #             self.user_k_tokens += k_tokens
+    #             vars.global_k_tokens += k_tokens
+    #             if(response["usage"]["prompt_tokens"] > 2000):
+    #                 cprint(prompt, color="white")
+            
+    #         except Exception as e:
+    #             vars.global_error_cast += 1
+    #             total_waiting_time += except_waiting_time
+    #             time.sleep(current_sleep_time)
+    #             if except_waiting_time < max_waiting_time:
+    #                 except_waiting_time *= 2
+    #                 current_sleep_time = np.random.randint(0, except_waiting_time-1)
+
+    #     return response.choices[0].message["content"]
+    
+    def get_completion(self, prompt, llm=None, temperature=0):
         response = ''
-        except_waiting_time = 1
-        total_waiting_time = 0
-        max_waiting_time = 16
-        current_sleep_time = 0.5
         while response == '':
             try:
-                if(self.use_wandb): # whether to use wandb
-                    start_time = time.time()
-
-                    if((start_time - vars.global_start_time)//vars.global_interval > vars.global_steps):
-                        if(vars.lock.acquire(False)):
-                            print("??", vars.lock, (start_time - vars.global_start_time)//vars.global_interval, vars.global_interval, vars.global_steps)
-                            print("\nMemory Start Identifier", start_time, vars.global_start_time, (start_time - vars.global_start_time), vars.global_steps)
-                            # vars.lock = True
-                            vars.global_steps += 1
-                            wandb.log(
-                                data = {"Real-time Traffic": vars.global_k_tokens - vars.global_last_tokens_record,
-                                        "Total Traffic": vars.global_k_tokens,
-                                        "Finished Users": vars.global_finished_users,
-                                        "Finished Pages": vars.global_finished_pages,
-                                        "Error Cast": vars.global_error_cast/1000
-                                },
-                                step = vars.global_steps
-                            )
-                            vars.global_last_tokens_record = vars.global_k_tokens
-                            # vars.lock = False
-                            vars.lock.release()
-                            print("\nMemory End Identifier", time.time(), vars.global_start_time, (time.time() - vars.global_start_time), vars.global_steps)
-
-                # response = openai.ChatCompletion.create(
-                #     model=llm,
-                #     messages=messages,
-                #     temperature=temperature,
-                #     request_timeout = 20,
-                #     max_tokens=1000
-                # )
-                
-                api_response = gemini_model.generate_content(
-                    model="gemini-3.1-flash-lite",
-                    contents=prompt,
-                    config=types.GenerateConfig(
-                        temperature=temperature,
-                        max_output_tokens=1000
-                    )
-                  )
-                response = api_response.text
-
-                print("===================================")
-                print(f'{response["usage"]["total_tokens"]} = {response["usage"]["prompt_tokens"]} + {response["usage"]["completion_tokens"]} tokens counted by the OpenAI API.')
-                k_tokens = response["usage"]["total_tokens"]/1000
-                self.user_k_tokens += k_tokens
-                vars.global_k_tokens += k_tokens
-                if(response["usage"]["prompt_tokens"] > 2000):
-                    cprint(prompt, color="white")
-            
+                from langchain.schema import HumanMessage
+                response = self.llm.invoke([HumanMessage(content=prompt)]).content
             except Exception as e:
+                print(e)
                 vars.global_error_cast += 1
-                total_waiting_time += except_waiting_time
-                time.sleep(current_sleep_time)
-                if except_waiting_time < max_waiting_time:
-                    except_waiting_time *= 2
-                    current_sleep_time = np.random.randint(0, except_waiting_time-1)
-
-        return response.choices[0].message["content"]
+                time.sleep(1)
+        return response
     
     def _user_taste_reflection(self, last_k: int = 10) -> List[str]:
-        """Return the user's taste about recent movies."""
-        prompt = """
+        """Return the user's recent taste from memory."""
+        if self.is_restaurant_domain:
+            prompt = """
+            The user has recently interacted with these restaurant recommendations:
+            <INPUT>\n\n
+            Given only the information above, summarize the user's recent restaurant taste using five concise descriptors.
+            Mention cuisine, service, value, ambience, or dietary signals when present.
+            Output format:
+            user's recent restaurant taste: <word1>,<word2>,<word3>,<word4>,<word5>.
+            """
+        else:
+            prompt = """
             The user has watched following movie recently:
             <INPUT>\n\n
             Given only the information above, conclude the user's taste of movie using five adjective words, which should be conclusive, descriptive and movie-genre related.
@@ -200,16 +225,34 @@ class AvatarMemory(BaseMemory):
         return result
     
     def _user_satisfaction_reflection(self, last_k: int = 10) -> List[str]:
-        """Return the user's feeling about recent movies."""
-        prompt = """
+        """Return the user's feeling about recent recommendations."""
+        if self.is_restaurant_domain:
+            reflection_style = {
+                "yoruba": "Use warm Yoruba-Nigerian urban dining sensibility. Mention pepper level, portions, service, value, and vibes when relevant.",
+                "igbo": "Be direct and practical. Mention value for money, food quality, portion size, and whether you would recommend it.",
+                "hausa": "Be measured and clear. Mention cleanliness, halal suitability when relevant, service, and whether the place feels reliable.",
+            }.get(
+                str(self.ethnic_group).lower(),
+                "Express satisfaction as a Nigerian urban diner: specific about food, service, portions, value, and atmosphere.",
+            )
+            prompt = f"""
+            <INPUT>\n\n
+            Given only the information above, describe your satisfaction with the restaurant recommendations.
+            {reflection_style}
+            Output format:
+            [satisfied/unsatisfied/mixed] with the recommendations because [specific reason mentioning food/service/value].
+            """
+            observations = "What was your interaction history with each restaurant recommendation page?"
+        else:
+            prompt = """
             <INPUT>\n\n
             Given only the information above, describe your feeling of the recommendation result using a sentence. 
             The output format must be:
             [unsatisfied/satisfied] with the recommendation result because [reason].
             """
+            observations = "what's your interaction history with each page of recommender?"
         
         
-        observations = "what's your interaction history with each page of recommender?"
         relevant_memories = self.fetch_memories(observations)
         observation_str = self.format_memories_detail(relevant_memories)
         prompt_filled = prompt.replace("<INPUT>", observation_str)

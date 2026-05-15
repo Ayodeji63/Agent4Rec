@@ -146,3 +146,9 @@ logs/
 
 transcmt.py
 *.out
+restaurant_detail.csv
+all_restaurant_detail.csv
+available_restaurant_detail.csv
+all_restaurant_detail_with_reviews.csv
+avatar_manifest.csv
+results/

@@ -41,9 +41,9 @@ class abstract_arena:
         self.prepare_dir()
         self.load_data()
         self.load_recommender()
+        self.load_additional_info()
         self.initialize_all_avatars()
         self.get_full_rankings()
-        self.load_additional_info()
         if(self.val_users):
             self.validate_all_avatars()
         else:
@@ -59,9 +59,26 @@ class abstract_arena:
         if(os.path.exists(model_path + '/args.txt')):
             with open(model_path + '/args.txt', 'r') as f:
                 self.saved_args.__dict__ = json.load(f)
-        else:
+        elif(os.path.exists("recommenders/weights/default_args.txt")):
             with open("recommenders/weights/default_args.txt", 'r') as f:
                 self.saved_args.__dict__ = json.load(f)
+        else:
+            self.saved_args.__dict__ = {
+                "candidate": False,
+                "nodrop": False,
+                "batch_size": 2048,
+                "neg_sample": 1,
+                "IPStype": "cn",
+                "infonce": 0,
+                "num_workers": 0,
+                "modeltype": self.modeltype,
+                "embed_size": 64,
+                "regs": 1e-5,
+                "train_norm": False,
+                "pred_norm": False,
+                "n_layers": 2,
+                "Ks": 20,
+            }
         # View current directory.
         self.saved_args.data_path = 'datasets/' # Modify the table of contents.
         self.saved_args.dataset = self.dataset
@@ -160,11 +177,19 @@ class abstract_arena:
         # else:
         # dump_dict = merge_user_list([self.data.train_user_list,self.data.valid_user_list])
         print("nodrop?", self.data.nodrop)
-        # @ Use valid data for simulation.
+        # Hide train + the non-evaluated held-out split. Keep the selected
+        # ground-truth split rankable so exposure can be measured.
+        ground_truth_split = getattr(self.args, "ground_truth_split", "valid")
         if(self.data.nodrop):
-            dump_dict = merge_user_list([self.data.train_nodrop_user_list, self.data.test_user_list])
+            if ground_truth_split == "test":
+                dump_dict = merge_user_list([self.data.train_nodrop_user_list, self.data.valid_user_list])
+            else:
+                dump_dict = merge_user_list([self.data.train_nodrop_user_list, self.data.test_user_list])
         else:
-            dump_dict = merge_user_list([self.data.train_user_list, self.data.test_user_list])
+            if ground_truth_split == "test":
+                dump_dict = merge_user_list([self.data.train_user_list, self.data.valid_user_list])
+            else:
+                dump_dict = merge_user_list([self.data.train_user_list, self.data.test_user_list])
         # dump_dict = merge_user_list([self.data.train_user_list, self.data.test_user_list])
         score_matrix = np.zeros((len(self.simulated_avatars_id), self.data.n_items))
         simulated_avatars_iter = DataIterator(self.simulated_avatars_id, batch_size=batch_size, shuffle=False, drop_last=False)

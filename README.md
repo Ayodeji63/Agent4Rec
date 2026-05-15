@@ -26,6 +26,7 @@ Agent4Rec, a recommender system simulator with 1,000 LLM-empowered generative ag
   - [Quick Start](#Quick-Start)
   - [Explore Various Recommender Settings](#Explore-Various-Recommender-Settings)
   - [See the result](#Results)
+- [Persona Generation Mode](#Persona-Generation-Mode)
 <!-- - [Explore Unsolved Problems in Recommender Systems](#Explore-Unsolved-Problems-in-Recommender-Systems)
   - [Filter Bubble](#Filter-Bubble)
   - [Causal Discovery](#Causal-Discovery) -->
@@ -110,9 +111,24 @@ You can choose the employed recommender by modifying `--modeltype <model_name>` 
 
 The results of the simulation will be saved in `storage/ml-1m/<model_name>/<experiment_name>` directory. As for the command in Section [Explore Various Recommender Settings](#Explore-Various-Recommender-Settings), the results will be saved in `storage/ml-1m/MyExp` directory. All the interaction history of agent 0 is documented in `storage/ml-1m/MF/MyExp/running_logs/0.txt`
 
+<p id="Persona-Generation-Mode"></p>
+
+## Persona Generation Mode
+
+This project extends the Agent4Rec profile-generation idea with several SimUSER-inspired components. In addition to extracting natural-language tastes from historical interactions, the notebook generates candidate personas with pickiness, engagement, conformity, variety, Big Five personality attributes, and memory initialization entries. It also supports self-consistent persona matching, where candidate personas are scored by comparing how well they explain the target user's history versus histories sampled from other users.
+
+Three generation presets are provided:
+
+- `quick`: generates a small test batch without self-consistency scoring. This is used only for debugging prompt format and output structure.
+- `balanced`: generates personas with light self-consistency scoring. Each candidate is evaluated with one target-vs-other history comparison.
+- `full`: follows the more expensive setting with repeated self-consistency comparisons for every candidate persona.
+
+For the current implementation, `balanced` mode was chosen as the practical experimental setting. It preserves the main methodological advantages of SimUSER, including random history sampling, liked/disliked evidence, preference summarization, candidate persona generation, behavioral traits, pickiness, memory construction, and self-consistent candidate selection. At the same time, it substantially reduces API cost and runtime compared with `full` mode. In full mode, 1,000 users with five candidate personas and three self-consistency comparisons per candidate require roughly 17,000 LLM calls, which is feasible in principle but costly and slow under limited compute, API budget, and project time.
+
+Therefore, the balanced setting should be understood as a resource-aware approximation of the full SimUSER-style persona matching pipeline. With more time and API resources, the same code can be scaled to `full` mode by increasing the number of users and self-consistency subsets, yielding more stable persona selection and a stronger alignment with the complete SimUSER procedure.
+
 <p id="Simulation-Cost"></p>  
 
 ## 💰 Simulation Cost
 🛎️ Note that all the experiments are powered by ChatGPT-3.5, and a complete simulation involving 1000 users would cost approximately $16. ($0.016/User)
-
 
